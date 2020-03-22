@@ -42,7 +42,15 @@ let ground = {
 let geometry = [
   ground,
   {
-    key: "leftBlock",
+    key: "plat",
+    width: 100,
+    height: 12,
+    x: 80,
+    y: canvas.height - 74,
+    color: "#0095DD"
+  },
+  {
+    key: "left",
     width: 12,
     height: 32,
     x: 350,
@@ -50,11 +58,11 @@ let geometry = [
     color: "#0095DD"
   },
   {
-    key: "rightBlock",
+    key: "right",
     width: 12,
-    height: 32,
-    x: 0,
-    y: canvas.height - 32 - ground.height,
+    height: 64,
+    x: 400,
+    y: canvas.height - 64 - ground.height,
     color: "#0095DD"
   }
 ];
@@ -97,7 +105,7 @@ function handleKeyPresses() {
   } else if (leftPressed) {
     player.dx = -5;
   }
-  if (upPressed && !playerIsJumping()) {
+  if (upPressed && player.dy === 0) {
     player.dy = -12;
   }
 }
@@ -110,90 +118,72 @@ function handleDeceleration() {
   }
   if (player.dy < 0) {
     player.dy += 1;
-  } else if (player.dy >= 0 && player.dy <= 8 && playerIsJumping()) {
+  } else if (player.dy >= 0 && player.dy <= 8) {
     player.dy += 1;
   }
 }
 
-function playerIsJumping() {
-  return ground.y > player.y + player.height;
-}
-
 function handleMovement() {
-  player.x += player.dx;
-  player.y += player.dy;
-
-  let playerTop = player.y;
-  let playerBottom = player.y + player.height;
-  let playerLeft = player.x;
-  let playerRight = player.x + player.width;
+  let newPlayerX = player.x + player.dx;
+  let newPlayerY = player.y + player.dy;
 
   for (const geo of geometry) {
-    let geoTop = geo.y;
-    let geoBottom = geo.y + geo.height;
-    let geoLeft = geo.x;
-    let geoRight = geo.x + geo.width;
+    let playerIsInGeoLeft =
+      player.x + player.width >= geo.x &&
+      player.x + player.width < geo.x + geo.width / 2;
 
-    function playerIsInGeoLeft() {
-      return playerRight >= geoLeft && playerRight <= geoLeft + geo.width / 2;
-    }
-    function playerIsInGeoRight() {
-      return geoRight >= playerLeft && playerLeft >= geoRight - geo.width / 2;
-    }
-    function playerIsInGeoTop() {
-      return playerBottom >= geoTop && playerBottom <= geoTop + geo.height / 2;
-    }
-    function playerIsInGeoBottom() {
-      return geoBottom >= playerTop && geoBottom - geo.height / 2 >= playerTop;
-    }
-    function playerIsAboveGeo() {
-      return geoTop >= playerBottom;
-    }
-    function playerIsBelowGeo() {
-      return playerTop >= geoBottom;
-    }
-    function playerIsLeftOfGeo() {
-      return geoLeft >= playerRight;
-    }
-    function playerIsRightOfGeo() {
-      return playerLeft >= geoRight;
-    }
+    let playerIsInGeoRight =
+      geo.x + geo.width >= player.x &&
+      player.x > geo.x + geo.width - geo.width / 2;
 
-    console.log({
-      key: geo.key,
-      playerIsInGeoLeft,
-      playerIsInGeoRight,
-      playerIsAboveGeo,
-      playerIsBelowGeo
-    });
+    let playerIsInGeoTop =
+      player.y + player.height >= geo.y &&
+      player.y + player.height < geo.y + geo.height / 2;
 
-    if (
-      playerIsInGeoLeft() &&
-      !playerIsAboveGeo() &&
-      !playerIsBelowGeo() &&
-      !playerIsInGeoTop() &&
-      !playerIsInGeoBottom()
-    ) {
-      player.x = geoLeft - player.width;
-      player.dx = 0;
+    let playerIsInGeoBottom =
+      geo.y + geo.height >= player.y &&
+      player.y > geo.y + geo.height - geo.height / 2;
+
+    let playerIsAboveGeo = geo.y >= player.y + player.height;
+
+    let playerIsBelowGeo = player.y >= geo.y + geo.height;
+
+    let playerIsLeftOfGeo = geo.x >= player.x + player.width;
+
+    let playerIsRightOfGeo = player.x >= geo.x + geo.width;
+
+    // 1. if the player is NOT before or after the shape, check vert collision
+    if (!playerIsLeftOfGeo && !playerIsRightOfGeo) {
+      // 1a. if the player WAS above the shape and they are now NOT then dump them on top of it
+      if (geo.y >= player.y + player.height) {
+        if (newPlayerY + player.height >= geo.y) {
+          newPlayerY = geo.y - player.height;
+          player.dy = 0;
+        }
+      }
     }
 
-    if (
-      playerIsInGeoRight() &&
-      !playerIsAboveGeo() &&
-      !playerIsBelowGeo() &&
-      !playerIsInGeoTop() &&
-      !playerIsInGeoBottom()
-    ) {
-      player.x = geoRight;
-      player.dx = 0;
-    }
-
-    if (playerIsInGeoTop() && !playerIsLeftOfGeo() && !playerIsRightOfGeo()) {
-      player.y = geoTop - player.height;
-      player.dy = 0;
+    // 2. if the player is NOT above or below the shape, check horiz collision
+    if (!playerIsAboveGeo && !playerIsBelowGeo) {
+      // 2a. if the player WAS before the shape and they are now NOT then dump them before it
+      if (geo.x >= player.x + player.width) {
+        if (newPlayerX + player.width >= geo.x) {
+          newPlayerX = geo.x - player.width;
+          player.dx = 0;
+        }
+      }
+      // 2b. if the player WAS after the shape and they are now NOT then dump them after it
+      if (player.x >= geo.x + geo.width) {
+        if (geo.x + geo.width >= newPlayerX) {
+          newPlayerX = geo.x + geo.width;
+          player.dx = 0;
+        }
+      }
     }
   }
+
+  player.x = newPlayerX;
+  player.y = newPlayerY;
 
   ////
   ////
