@@ -30,42 +30,100 @@ function keyUpHandler(e) {
   }
 }
 
-let ground = {
-  key: "ground",
-  width: canvas.width,
-  height: 12,
-  x: 0,
-  y: canvas.height - 12,
-  color: "#0095DD"
-};
-
 let geometry = [
-  ground,
   {
-    key: "plat",
-    width: 100,
+    width: canvas.width,
     height: 12,
-    x: 80,
-    y: canvas.height - 74,
-    color: "#0095DD"
+    x: 0,
+    y: canvas.height - 12,
+    color: "#0095DD",
   },
   {
-    key: "left",
     width: 12,
-    height: 32,
-    x: 350,
-    y: canvas.height - 32 - ground.height,
-    color: "#0095DD"
+    height: 12,
+    x: 64,
+    y: canvas.height - 12 - 12,
+    color: "#0095DD",
   },
   {
-    key: "right",
     width: 12,
-    height: 64,
-    x: 400,
-    y: canvas.height - 64 - ground.height,
-    color: "#0095DD"
-  }
+    height: 12,
+    x: 112,
+    y: canvas.height - 30 - 12,
+    color: "#0095DD",
+  },
+  {
+    width: 12,
+    height: 12,
+    x: 160,
+    y: canvas.height - 42 - 12,
+    color: "#0095DD",
+  },
+  {
+    width: 12,
+    height: 12,
+    x: 204,
+    y: canvas.height - 54 - 12,
+    color: "#0095DD",
+  },
+  {
+    width: 48,
+    height: 12,
+    x: 252,
+    y: canvas.height - 54 - 12,
+    color: "#0095DD",
+  },
+  {
+    width: 48,
+    height: 12,
+    x: 342,
+    y: canvas.height - 54 - 12,
+    color: "#0095DD",
+  },
+  {
+    width: 12,
+    height: 54,
+    x: 432,
+    y: canvas.height - 54 - 12,
+    color: "#0095DD",
+  },
+  {
+    width: 12,
+    height: 54,
+    x: 514,
+    y: canvas.height - 54 - 12,
+    color: "#0095DD",
+  },
+  {
+    width: 70,
+    height: 24,
+    x: 444,
+    y: canvas.height - 24 - 12,
+    color: "#dd4900",
+    kill: true,
+  },
+  {
+    width: 12,
+    height: 12,
+    x: 577,
+    y: canvas.height - 30 - 12,
+    color: "#ddcd00",
+    win: true,
+  },
 ];
+
+let player = {
+  width: 12,
+  height: 18,
+  x: 12,
+  y: canvas.height - 18 - 12,
+  dx: 0,
+  dy: 0,
+  color: "#8eff81",
+  isJumping: false,
+  isKill: false,
+  isWin: false,
+};
 
 function drawRect({ x, y, width, height, color }) {
   ctx.beginPath();
@@ -75,23 +133,6 @@ function drawRect({ x, y, width, height, color }) {
   ctx.closePath();
 }
 
-function drawGeometry() {
-  for (const geo of geometry) {
-    drawRect(geo);
-  }
-}
-
-let player = {
-  width: 12,
-  height: 18,
-  x: 48,
-  y: canvas.height - 18 - ground.height,
-  dx: 0,
-  dy: 0,
-  color: "#8eff81",
-  isJumping: false
-};
-
 function drawPlayer() {
   ctx.beginPath();
   ctx.rect(player.x, player.y, player.width, player.height);
@@ -100,15 +141,27 @@ function drawPlayer() {
   ctx.closePath();
 }
 
+function drawGameOver() {
+  ctx.font = "24px Courier";
+  ctx.fillStyle = "#dd4900";
+  ctx.fillText("blockie has died :(", 12, 24);
+}
+
+function drawWin() {
+  ctx.font = "24px Courier";
+  ctx.fillStyle = "#ddcd00";
+  ctx.fillText("blockie has won :)", 12, 24);
+}
+
 function handleKeyPresses() {
   if (rightPressed) {
-    player.dx = 5;
+    player.dx = 4;
   } else if (leftPressed) {
-    player.dx = -5;
+    player.dx = -4;
   }
   if (upPressed && !player.isJumping) {
     player.isJumping = true;
-    player.dy = -12;
+    player.dy = -10;
   }
 }
 
@@ -143,6 +196,14 @@ function handleMovement() {
       // 1a. if the player WAS above the shape and they are now NOT then dump them on top of it
       if (geo.y >= player.y + player.height) {
         if (newPlayerY + player.height >= geo.y) {
+          if (geo.kill) {
+            player.isKill = true;
+          }
+
+          if (geo.win) {
+            player.isWin = true;
+          }
+
           newPlayerY = geo.y - player.height;
           player.dy = 0;
 
@@ -199,12 +260,21 @@ function handleMovement() {
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  drawGeometry();
+  for (const geo of geometry) {
+    drawRect(geo);
+  }
+
   drawPlayer();
 
-  handleKeyPresses();
-  handleDeceleration();
-  handleMovement();
+  if (player.isKill) {
+    drawGameOver();
+  } else if (player.isWin) {
+    drawWin();
+  } else {
+    handleKeyPresses();
+    handleDeceleration();
+    handleMovement();
+  }
 
   requestAnimationFrame(draw);
 }
