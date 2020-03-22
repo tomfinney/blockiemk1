@@ -88,7 +88,8 @@ let player = {
   y: canvas.height - 18 - ground.height,
   dx: 0,
   dy: 0,
-  color: "#8eff81"
+  color: "#8eff81",
+  isJumping: false
 };
 
 function drawPlayer() {
@@ -105,7 +106,8 @@ function handleKeyPresses() {
   } else if (leftPressed) {
     player.dx = -5;
   }
-  if (upPressed && player.dy === 0) {
+  if (upPressed && !player.isJumping) {
+    player.isJumping = true;
     player.dy = -12;
   }
 }
@@ -116,9 +118,9 @@ function handleDeceleration() {
   } else if (player.dx < 0) {
     player.dx += 1;
   }
-  if (player.dy < 0) {
-    player.dy += 1;
-  } else if (player.dy >= 0 && player.dy <= 8) {
+
+  // just always try to increase gravity until it's 8p/s
+  if (player.dy <= 8) {
     player.dy += 1;
   }
 }
@@ -128,22 +130,6 @@ function handleMovement() {
   let newPlayerY = player.y + player.dy;
 
   for (const geo of geometry) {
-    let playerIsInGeoLeft =
-      player.x + player.width >= geo.x &&
-      player.x + player.width < geo.x + geo.width / 2;
-
-    let playerIsInGeoRight =
-      geo.x + geo.width >= player.x &&
-      player.x > geo.x + geo.width - geo.width / 2;
-
-    let playerIsInGeoTop =
-      player.y + player.height >= geo.y &&
-      player.y + player.height < geo.y + geo.height / 2;
-
-    let playerIsInGeoBottom =
-      geo.y + geo.height >= player.y &&
-      player.y > geo.y + geo.height - geo.height / 2;
-
     let playerIsAboveGeo = geo.y >= player.y + player.height;
 
     let playerIsBelowGeo = player.y >= geo.y + geo.height;
@@ -158,6 +144,16 @@ function handleMovement() {
       if (geo.y >= player.y + player.height) {
         if (newPlayerY + player.height >= geo.y) {
           newPlayerY = geo.y - player.height;
+          player.dy = 0;
+
+          // assume they have landed here so set jumping to false
+          player.isJumping = false;
+        }
+      }
+      // 1b. if the player WAS below the shape and they are now NOT then dump them on below it
+      if (player.y >= geo.y + geo.height) {
+        if (geo.y + geo.height >= newPlayerY) {
+          newPlayerY = geo.y + geo.height;
           player.dy = 0;
         }
       }
