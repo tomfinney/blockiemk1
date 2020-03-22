@@ -31,25 +31,52 @@ function keyUpHandler(e) {
 }
 
 let ground = {
+  key: "ground",
   width: canvas.width,
-  height: 16,
+  height: 12,
   x: 0,
-  y: canvas.height - 16,
+  y: canvas.height - 12,
   color: "#0095DD"
 };
 
-function drawGround() {
+let geometry = [
+  ground,
+  {
+    key: "leftBlock",
+    width: 12,
+    height: 32,
+    x: 350,
+    y: canvas.height - 32 - ground.height,
+    color: "#0095DD"
+  },
+  {
+    key: "rightBlock",
+    width: 12,
+    height: 32,
+    x: 0,
+    y: canvas.height - 32 - ground.height,
+    color: "#0095DD"
+  }
+];
+
+function drawRect({ x, y, width, height, color }) {
   ctx.beginPath();
-  ctx.rect(ground.x, ground.y, ground.width, ground.height);
-  ctx.fillStyle = ground.color;
+  ctx.rect(x, y, width, height);
+  ctx.fillStyle = color;
   ctx.fill();
   ctx.closePath();
+}
+
+function drawGeometry() {
+  for (const geo of geometry) {
+    drawRect(geo);
+  }
 }
 
 let player = {
   width: 12,
   height: 18,
-  x: 0,
+  x: 48,
   y: canvas.height - 18 - ground.height,
   dx: 0,
   dy: 0,
@@ -94,6 +121,83 @@ function playerIsJumping() {
 
 function handleMovement() {
   player.x += player.dx;
+  player.y += player.dy;
+
+  let playerTop = player.y;
+  let playerBottom = player.y + player.height;
+  let playerLeft = player.x;
+  let playerRight = player.x + player.width;
+
+  for (const geo of geometry) {
+    let geoTop = geo.y;
+    let geoBottom = geo.y + geo.height;
+    let geoLeft = geo.x;
+    let geoRight = geo.x + geo.width;
+
+    function playerIsInGeoLeft() {
+      return playerRight >= geoLeft && playerRight <= geoLeft + geo.width / 2;
+    }
+    function playerIsInGeoRight() {
+      return geoRight >= playerLeft && playerLeft >= geoRight - geo.width / 2;
+    }
+    function playerIsInGeoTop() {
+      return playerBottom >= geoTop && playerBottom <= geoTop + geo.height / 2;
+    }
+    function playerIsInGeoBottom() {
+      return geoBottom >= playerTop && geoBottom - geo.height / 2 >= playerTop;
+    }
+    function playerIsAboveGeo() {
+      return geoTop >= playerBottom;
+    }
+    function playerIsBelowGeo() {
+      return playerTop >= geoBottom;
+    }
+    function playerIsLeftOfGeo() {
+      return geoLeft >= playerRight;
+    }
+    function playerIsRightOfGeo() {
+      return playerLeft >= geoRight;
+    }
+
+    console.log({
+      key: geo.key,
+      playerIsInGeoLeft,
+      playerIsInGeoRight,
+      playerIsAboveGeo,
+      playerIsBelowGeo
+    });
+
+    if (
+      playerIsInGeoLeft() &&
+      !playerIsAboveGeo() &&
+      !playerIsBelowGeo() &&
+      !playerIsInGeoTop() &&
+      !playerIsInGeoBottom()
+    ) {
+      player.x = geoLeft - player.width;
+      player.dx = 0;
+    }
+
+    if (
+      playerIsInGeoRight() &&
+      !playerIsAboveGeo() &&
+      !playerIsBelowGeo() &&
+      !playerIsInGeoTop() &&
+      !playerIsInGeoBottom()
+    ) {
+      player.x = geoRight;
+      player.dx = 0;
+    }
+
+    if (playerIsInGeoTop() && !playerIsLeftOfGeo() && !playerIsRightOfGeo()) {
+      player.y = geoTop - player.height;
+      player.dy = 0;
+    }
+  }
+
+  ////
+  ////
+  ////
 
   if (player.x + player.width > canvas.width) {
     player.x = canvas.width - player.width;
@@ -104,18 +208,12 @@ function handleMovement() {
     player.x = 0;
     player.dx = 0;
   }
-
-  player.y += player.dy;
-
-  if (player.y + player.height > ground.y) {
-    player.dy = 0;
-    player.y = ground.y - player.height;
-  }
 }
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawGround();
+
+  drawGeometry();
   drawPlayer();
 
   handleKeyPresses();
