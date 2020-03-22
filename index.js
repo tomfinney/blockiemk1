@@ -94,6 +94,17 @@ function playerIsJumping() {
 
 function handleMovement() {
   player.x += player.dx;
+
+  if (player.x + player.width > canvas.width) {
+    player.x = canvas.width - player.width;
+    player.dx = 0;
+  }
+
+  if (player.x < 0) {
+    player.x = 0;
+    player.dx = 0;
+  }
+
   player.y += player.dy;
 
   if (player.y + player.height > ground.y) {
