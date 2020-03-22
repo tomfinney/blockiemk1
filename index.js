@@ -3,6 +3,7 @@ let ctx = canvas.getContext("2d");
 
 let rightPressed = false;
 let leftPressed = false;
+let upPressed = false;
 
 document.addEventListener("keydown", keyDownHandler, false);
 document.addEventListener("keyup", keyUpHandler, false);
@@ -13,6 +14,9 @@ function keyDownHandler(e) {
   } else if (e.key == "Left" || e.key == "ArrowLeft") {
     leftPressed = true;
   }
+  if (e.key == "Up" || e.key == "ArrowUp") {
+    upPressed = true;
+  }
 }
 
 function keyUpHandler(e) {
@@ -20,6 +24,9 @@ function keyUpHandler(e) {
     rightPressed = false;
   } else if (e.key == "Left" || e.key == "ArrowLeft") {
     leftPressed = false;
+  }
+  if (e.key == "Up" || e.key == "ArrowUp") {
+    upPressed = false;
   }
 }
 
@@ -44,6 +51,8 @@ let player = {
   height: 18,
   x: 0,
   y: canvas.height - 18 - ground.height,
+  dx: 0,
+  dy: 0,
   color: "#8eff81"
 };
 
@@ -55,12 +64,41 @@ function drawPlayer() {
   ctx.closePath();
 }
 
-function handleMovement() {
+function handleKeyPresses() {
   if (rightPressed) {
-    return (player.x += 5);
+    player.dx = 5;
+  } else if (leftPressed) {
+    player.dx = -5;
   }
-  if (leftPressed) {
-    return (player.x -= 5);
+  if (upPressed && !playerIsJumping()) {
+    player.dy = -12;
+  }
+}
+
+function handleDeceleration() {
+  if (player.dx > 0) {
+    player.dx -= 1;
+  } else if (player.dx < 0) {
+    player.dx += 1;
+  }
+  if (player.dy < 0) {
+    player.dy += 1;
+  } else if (player.dy >= 0 && player.dy <= 8 && playerIsJumping()) {
+    player.dy += 1;
+  }
+}
+
+function playerIsJumping() {
+  return ground.y > player.y + player.height;
+}
+
+function handleMovement() {
+  player.x += player.dx;
+  player.y += player.dy;
+
+  if (player.y + player.height > ground.y) {
+    player.dy = 0;
+    player.y = ground.y - player.height;
   }
 }
 
@@ -69,6 +107,8 @@ function draw() {
   drawGround();
   drawPlayer();
 
+  handleKeyPresses();
+  handleDeceleration();
   handleMovement();
 
   requestAnimationFrame(draw);
