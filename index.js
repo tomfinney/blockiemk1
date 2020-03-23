@@ -132,7 +132,10 @@ let player = {
 
   //
   player: true,
+  canDie: true,
 };
+
+canvas.addEventListener("click", () => (player.canDie = !player.canDie), false);
 
 let baddie = {
   width: 12,
@@ -171,6 +174,16 @@ function drawWin() {
   ctx.font = "24px Courier";
   ctx.fillStyle = "#ddcd00";
   ctx.fillText("blockie has won :)", 12, 24);
+}
+
+function drawDebug() {
+  ctx.font = "12px Courier";
+  ctx.fillStyle = "#333";
+  ctx.fillText(
+    player.canDie ? "blockie can die" : "blockie cannot die!",
+    12,
+    60
+  );
 }
 
 function handleKeyPresses() {
@@ -226,8 +239,9 @@ function checkCollisionConditions(character, geo) {
   if (!character.player) {
     return;
   }
-  if (geo.kill) {
-    // character.isKill = true;
+
+  if (geo.kill && character.canDie) {
+    character.isKill = true;
   }
 
   if (geo.win) {
@@ -359,6 +373,8 @@ function draw() {
     handleMovement(baddie);
     handleDirection(baddie);
   }
+
+  drawDebug();
 
   requestAnimationFrame(draw);
 }
