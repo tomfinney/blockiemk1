@@ -121,22 +121,42 @@ let player = {
   dy: 0,
   color: "#8eff81",
   isJumping: false,
+  //
+  hitTop: false,
+  hitBottom: false,
+  hitLeft: false,
+  hitRight: false,
+  // win conditions
   isKill: false,
   isWin: false,
+
+  //
+  player: true,
+};
+
+let baddie = {
+  width: 12,
+  height: 18,
+  x: 320,
+  y: canvas.height - 18 - 12,
+  dx: 1,
+  dy: 0,
+  color: "#dd4900",
+  isJumping: false,
+  //
+  hitTop: false,
+  hitBottom: false,
+  hitLeft: false,
+  hitRight: false,
+  //
+  player: false,
+  kill: true,
 };
 
 function drawRect({ x, y, width, height, color }) {
   ctx.beginPath();
   ctx.rect(x, y, width, height);
   ctx.fillStyle = color;
-  ctx.fill();
-  ctx.closePath();
-}
-
-function drawPlayer() {
-  ctx.beginPath();
-  ctx.rect(player.x, player.y, player.width, player.height);
-  ctx.fillStyle = player.color;
   ctx.fill();
   ctx.closePath();
 }
@@ -178,82 +198,136 @@ function handleDeceleration() {
   }
 }
 
-function handleMovement() {
-  let newPlayerX = player.x + player.dx;
-  let newPlayerY = player.y + player.dy;
+function handleSpeed() {
+  if (player.dx > 0) {
+    player.dx -= 1;
+  } else if (player.dx < 0) {
+    player.dx += 1;
+  }
 
-  for (const geo of geometry) {
-    let playerIsAboveGeo = geo.y >= player.y + player.height;
+  // just always try to increase gravity until it's 8p/s
+  if (player.dy <= 8) {
+    player.dy += 1;
+  }
+}
 
-    let playerIsBelowGeo = player.y >= geo.y + geo.height;
+function handleDirection(character) {
+  if (character.dx !== 0) {
+    return;
+  }
+  if (character.hitRight) {
+    character.dx = -1;
+  } else if (character.hitLeft) {
+    character.dx = 1;
+  }
+}
 
-    let playerIsLeftOfGeo = geo.x >= player.x + player.width;
+function checkCollisionConditions(character, geo) {
+  if (!character.player) {
+    return;
+  }
+  if (geo.kill) {
+    character.isKill = true;
+  }
 
-    let playerIsRightOfGeo = player.x >= geo.x + geo.width;
+  if (geo.win) {
+    character.isWin = true;
+  }
+}
 
-    // 1. if the player is NOT before or after the shape, check vert collision
-    if (!playerIsLeftOfGeo && !playerIsRightOfGeo) {
-      // 1a. if the player WAS above the shape and they are now NOT then dump them on top of it
-      if (geo.y >= player.y + player.height) {
-        if (newPlayerY + player.height >= geo.y) {
-          if (geo.kill) {
-            player.isKill = true;
-          }
+function handleMovement(character) {
+  let newCharacterX = character.x + character.dx;
+  let newCharacterY = character.y + character.dy;
 
-          if (geo.win) {
-            player.isWin = true;
-          }
+  character.hitTop = false;
+  character.hitBottom = false;
+  character.hitLeft = false;
+  character.hitRight = false;
 
-          newPlayerY = geo.y - player.height;
-          player.dy = 0;
+  let listOfGeometry = [...geometry];
+
+  if (character.player) {
+    listOfGeometry.push(baddie);
+  } else {
+    listOfGeometry.push(player);
+  }
+
+  for (const geo of listOfGeometry) {
+    let characterIsAboveGeo = geo.y >= character.y + character.height;
+
+    let characterIsBelowGeo = character.y >= geo.y + geo.height;
+
+    let characterIsLeftOfGeo = geo.x >= character.x + character.width;
+
+    let characterIsRightOfGeo = character.x >= geo.x + geo.width;
+
+    // 1. if the character is NOT before or after the shape, check vert collision
+    if (!characterIsLeftOfGeo && !characterIsRightOfGeo) {
+      // 1a. if the character WAS above the shape and they are now NOT then dump them on top of it
+      if (geo.y >= character.y + character.height) {
+        if (newCharacterY + character.height >= geo.y) {
+          checkCollisionConditions(character, geo);
+
+          newCharacterY = geo.y - character.height;
+          character.dy = 0;
+          character.hitTop = true;
 
           // assume they have landed here so set jumping to false
-          player.isJumping = false;
+          character.isJumping = false;
         }
       }
-      // 1b. if the player WAS below the shape and they are now NOT then dump them on below it
-      if (player.y >= geo.y + geo.height) {
-        if (geo.y + geo.height >= newPlayerY) {
-          newPlayerY = geo.y + geo.height;
-          player.dy = 0;
+      // 1b. if the character WAS below the shape and they are now NOT then dump them on below it
+      if (character.y >= geo.y + geo.height) {
+        if (geo.y + geo.height >= newCharacterY) {
+          checkCollisionConditions(character, geo);
+
+          newCharacterY = geo.y + geo.height;
+          character.dy = 0;
+          character.hitBottom = true;
         }
       }
     }
 
-    // 2. if the player is NOT above or below the shape, check horiz collision
-    if (!playerIsAboveGeo && !playerIsBelowGeo) {
-      // 2a. if the player WAS before the shape and they are now NOT then dump them before it
-      if (geo.x >= player.x + player.width) {
-        if (newPlayerX + player.width >= geo.x) {
-          newPlayerX = geo.x - player.width;
-          player.dx = 0;
+    // 2. if the character is NOT above or below the shape, check horiz collision
+    if (!characterIsAboveGeo && !characterIsBelowGeo) {
+      // 2a. if the character WAS before the shape and they are now NOT then dump them before it
+      if (geo.x >= character.x + character.width) {
+        if (newCharacterX + character.width >= geo.x) {
+          checkCollisionConditions(character, geo);
+
+          newCharacterX = geo.x - character.width;
+          character.dx = 0;
+          character.hitRight = true;
         }
       }
-      // 2b. if the player WAS after the shape and they are now NOT then dump them after it
-      if (player.x >= geo.x + geo.width) {
-        if (geo.x + geo.width >= newPlayerX) {
-          newPlayerX = geo.x + geo.width;
-          player.dx = 0;
+      // 2b. if the character WAS after the shape and they are now NOT then dump them after it
+      if (character.x >= geo.x + geo.width) {
+        if (geo.x + geo.width >= newCharacterX) {
+          checkCollisionConditions(character, geo);
+
+          newCharacterX = geo.x + geo.width;
+          character.dx = 0;
+          character.hitLeft = true;
         }
       }
     }
   }
 
-  player.x = newPlayerX;
-  player.y = newPlayerY;
+  character.x = newCharacterX;
+  character.y = newCharacterY;
 
   ////
   ////
   ////
 
-  if (player.x + player.width > canvas.width) {
-    player.x = canvas.width - player.width;
-    player.dx = 0;
+  if (character.x + character.width > canvas.width) {
+    character.x = canvas.width - character.width;
+    character.dx = 0;
   }
 
-  if (player.x < 0) {
-    player.x = 0;
-    player.dx = 0;
+  if (character.x < 0) {
+    character.x = 0;
+    character.dx = 0;
   }
 }
 
@@ -264,16 +338,22 @@ function draw() {
     drawRect(geo);
   }
 
-  drawPlayer();
+  drawRect(baddie);
+  drawRect(player);
 
   if (player.isKill) {
     drawGameOver();
   } else if (player.isWin) {
     drawWin();
   } else {
+    // player
     handleKeyPresses();
     handleDeceleration();
-    handleMovement();
+    handleMovement(player);
+
+    // baddie
+    handleMovement(baddie);
+    handleDirection(baddie);
   }
 
   requestAnimationFrame(draw);
