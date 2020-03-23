@@ -227,7 +227,7 @@ function checkCollisionConditions(character, geo) {
     return;
   }
   if (geo.kill) {
-    character.isKill = true;
+    // character.isKill = true;
   }
 
   if (geo.win) {
@@ -253,13 +253,13 @@ function handleMovement(character) {
   }
 
   for (const geo of listOfGeometry) {
-    let characterIsAboveGeo = geo.y >= character.y + character.height;
+    let characterIsAboveGeo = geo.y >= newCharacterY + character.height;
 
-    let characterIsBelowGeo = character.y >= geo.y + geo.height;
+    let characterIsBelowGeo = newCharacterY >= geo.y + geo.height;
 
-    let characterIsLeftOfGeo = geo.x >= character.x + character.width;
+    let characterIsLeftOfGeo = geo.x >= newCharacterX + character.width;
 
-    let characterIsRightOfGeo = character.x >= geo.x + geo.width;
+    let characterIsRightOfGeo = newCharacterX >= geo.x + geo.width;
 
     // 1. if the character is NOT before or after the shape, check vert collision
     if (!characterIsLeftOfGeo && !characterIsRightOfGeo) {
@@ -269,6 +269,7 @@ function handleMovement(character) {
           checkCollisionConditions(character, geo);
 
           newCharacterY = geo.y - character.height;
+
           character.dy = 0;
           character.hitTop = true;
 
@@ -282,6 +283,7 @@ function handleMovement(character) {
           checkCollisionConditions(character, geo);
 
           newCharacterY = geo.y + geo.height;
+
           character.dy = 0;
           character.hitBottom = true;
         }
@@ -296,6 +298,7 @@ function handleMovement(character) {
           checkCollisionConditions(character, geo);
 
           newCharacterX = geo.x - character.width;
+
           character.dx = 0;
           character.hitRight = true;
         }
@@ -306,6 +309,7 @@ function handleMovement(character) {
           checkCollisionConditions(character, geo);
 
           newCharacterX = geo.x + geo.width;
+
           character.dx = 0;
           character.hitLeft = true;
         }
