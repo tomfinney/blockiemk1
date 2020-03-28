@@ -1,3 +1,3 @@
-import init from "./src";
+import { frame } from "./src";
 
-init();
+frame();

@@ -56,7 +56,7 @@ function drawWin() {
   ctx.fillText("blockie has won :)", 12, 24);
 }
 
-function frame() {
+export function frame() {
   ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
   // random mob spawner for lols
@@ -101,5 +101,3 @@ function frame() {
 
   requestAnimationFrame(frame);
 }
-
-frame();
