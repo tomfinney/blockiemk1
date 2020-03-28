@@ -5,6 +5,7 @@ export const THEME = {
     primary: "#0095DD",
     good: "#8eff81",
     bad: "#dd4900",
+    badLight: "#f56f2d",
     gold: "#ddcd00",
   },
 };
