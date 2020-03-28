@@ -1,0 +1,18 @@
+{
+  "name": "blockiemk1",
+  "version": "0.0.1",
+  "description": "blockie the movie: the game",
+  "main": "index.js",
+  "repository": "https://github.com/tomfinney/blockiemk1.git",
+  "author": "tom.finney@cd2solutions.co.uk <tom.finney@cd2solutions.co.uk>",
+  "license": "MIT",
+  "scripts": {
+    "dev": "parcel index.html"
+  },
+  "dependencies": {
+    "parcel": "^1.12.4"
+  },
+  "devDependencies": {
+    "typescript": "^3.8.3"
+  }
+}
