@@ -18,7 +18,8 @@ canvas.width = CANVAS_WIDTH;
 let ctx = canvas.getContext("2d");
 
 // General game state
-let screen: "menu" | "game" = "menu";
+type IScreen = "mainMenu" | "game" | "editor";
+let screen: IScreen = "mainMenu";
 let time = Date.now();
 
 // Game playing state
@@ -76,6 +77,13 @@ mouseHandlers(canvas, {
   },
 });
 
+function changeScreen(newScreen: IScreen) {
+  screen = newScreen;
+
+  clickables = [];
+  mouseOverClickableKey = "";
+}
+
 type IClickable = {
   x: number;
   y: number;
@@ -116,14 +124,17 @@ export function init() {
   ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
   let frame;
-  clickables = [];
 
-  if (screen === "menu") {
-    frame = menuFrame;
+  if (screen === "mainMenu") {
+    frame = mainMenuFrame;
   }
 
   if (screen === "game") {
     frame = gameFrame;
+  }
+
+  if (screen === "editor") {
+    frame = editorFrame;
   }
 
   frame();
@@ -139,7 +150,7 @@ export function init() {
   requestAnimationFrame(init);
 }
 
-function menuFrame() {
+function mainMenuFrame() {
   drawText(ctx, {
     y: 48,
     x: 0,
@@ -159,7 +170,7 @@ function menuFrame() {
 
   let startGameBtnKey = "startGameBtn";
 
-  let buttonBounds = drawButton(ctx, {
+  let startButtonBounds = drawButton(ctx, {
     y: 144,
     x: 0,
     textSize: 16,
@@ -173,13 +184,74 @@ function menuFrame() {
   });
 
   addOrUpdateClickable({
-    key: "startGameBtn",
-    x: buttonBounds.x,
-    y: buttonBounds.y,
-    width: buttonBounds.width,
-    height: buttonBounds.height,
+    key: startGameBtnKey,
+    x: startButtonBounds.x,
+    y: startButtonBounds.y,
+    width: startButtonBounds.width,
+    height: startButtonBounds.height,
     onClick: () => {
-      screen = "game";
+      changeScreen("game");
+    },
+  });
+
+  let editorBtnKey = "editorBtn";
+
+  let editorButtonBounds = drawButton(ctx, {
+    y: 180,
+    x: 0,
+    textSize: 16,
+    textColor: THEME.colors.white,
+    buttonColor:
+      mouseOverClickableKey === editorBtnKey
+        ? THEME.colors.primaryLight
+        : THEME.colors.primary,
+    text: "level editor",
+    centeredX: true,
+  });
+
+  addOrUpdateClickable({
+    key: editorBtnKey,
+    x: editorButtonBounds.x,
+    y: editorButtonBounds.y,
+    width: editorButtonBounds.width,
+    height: editorButtonBounds.height,
+    onClick: () => {
+      changeScreen("editor");
+    },
+  });
+}
+
+function editorFrame() {
+  drawText(ctx, {
+    y: 48,
+    x: 48,
+    size: 24,
+    color: THEME.colors.primary,
+    text: "this isn't done :/",
+  });
+
+  let mainMenuBtnKey = "mainMenuBtn";
+
+  let mainMenuButtonBounds = drawButton(ctx, {
+    y: 144,
+    x: 48,
+    textSize: 16,
+    textColor: THEME.colors.white,
+    buttonColor:
+      mouseOverClickableKey === mainMenuBtnKey
+        ? THEME.colors.primaryLight
+        : THEME.colors.primary,
+    text: "take me back pls",
+  });
+
+  addOrUpdateClickable({
+    key: mainMenuBtnKey,
+    x: mainMenuButtonBounds.x,
+    y: mainMenuButtonBounds.y,
+    width: mainMenuButtonBounds.width,
+    height: mainMenuButtonBounds.height,
+    onClick: () => {
+      changeScreen("mainMenu");
     },
   });
 }
