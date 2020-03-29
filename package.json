@@ -7,7 +7,8 @@
   "author": "tom.finney@cd2solutions.co.uk <tom.finney@cd2solutions.co.uk>",
   "license": "MIT",
   "scripts": {
-    "dev": "parcel index.html"
+    "dev": "parcel index.html",
+    "build": "parcel build index.html"
   },
   "dependencies": {
     "parcel": "^1.12.4"
