@@ -359,50 +359,83 @@ let level = 1;
 let currentLevel = levels[level];
 let { geometry, enemies, player } = currentLevel;
 
+let clonedPlayer = { ...player };
+let clonedEnemies = [...enemies];
+
 function gameFrame() {
   // random mob spawner for lols
-  if (enemies.length < 6 && Date.now() - time >= 3000) {
+  if (clonedEnemies.length < 6 && Date.now() - time >= 3000) {
     time = Date.now();
-    enemies.push({ ...enemies[0], x: 320 });
+    clonedEnemies.push({ ...clonedEnemies[0], x: 320 });
   }
-
-  // for (const shape of tempShapes) {
-  //   drawRect(ctx, shape);
-  // }
 
   for (const geo of geometry) {
     drawRect(ctx, geo);
   }
 
-  for (const enemy of enemies) {
+  for (const enemy of clonedEnemies) {
     drawRect(ctx, enemy);
   }
 
-  drawRect(ctx, player);
+  drawRect(ctx, clonedPlayer);
 
-  // if (player.isKill) {
-  //   drawGameOver();
-  // } else if (player.isWin) {
-  //   drawWin();
-  // } else {
-  for (const enemy of enemies) {
-    handleDecelerationAndGravity(enemy, { friction: false });
-    handleMovementAndCollisions(enemy, [
-      ...geometry,
-      ...enemies.filter(e => e !== enemy),
-      player,
-    ]);
-    handleDirectionChange(enemy);
+  if (clonedPlayer.isKill) {
+    drawText(ctx, {
+      x: 12,
+      y: 72,
+      color: THEME.colors.bad,
+      text: "you have died :(",
+    });
+    drawClickable({
+      key: "restartBtn",
+      y: 108,
+      x: 12,
+      textSize: 12,
+      text: "retry?",
+      onClick: () => {
+        clickables = [];
+        clonedPlayer = { ...player };
+        clonedEnemies = [...enemies];
+      },
+    });
+  } else if (clonedPlayer.isWin) {
+    drawText(ctx, {
+      x: 12,
+      y: 72,
+      color: THEME.colors.gold,
+      text: "you have won!!! :)",
+    });
+    drawClickable({
+      key: "restartBtn",
+      y: 108,
+      x: 12,
+      textSize: 12,
+      text: "replay?",
+      onClick: () => {
+        clickables = [];
+        clonedPlayer = { ...player };
+        clonedEnemies = [...enemies];
+      },
+    });
+  } else {
+    for (const enemy of clonedEnemies) {
+      handleDecelerationAndGravity(enemy, { friction: false });
+      handleMovementAndCollisions(enemy, [
+        ...geometry,
+        ...clonedEnemies.filter(e => e !== enemy),
+        clonedPlayer,
+      ]);
+      handleDirectionChange(enemy);
+    }
+
+    handleDecelerationAndGravity(clonedPlayer, { friction: true });
+    handleVelocity(clonedPlayer, {
+      rightPressed,
+      leftPressed,
+      upPressed,
+    });
+    handleMovementAndCollisions(clonedPlayer, [...geometry, ...clonedEnemies]);
   }
-
-  handleDecelerationAndGravity(player, { friction: true });
-  handleVelocity(player, {
-    rightPressed,
-    leftPressed,
-    upPressed,
-  });
-  handleMovementAndCollisions(player, [...geometry, ...enemies]);
-  // }
 
   /////////////
   /////////////
