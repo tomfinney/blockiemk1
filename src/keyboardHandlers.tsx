@@ -1,4 +1,4 @@
-type IInputHandlersOptions = {
+type IKeyboardHandlersOptions = {
   onRightDown: () => void;
   onLeftDown: () => void;
   onUpDown: () => void;
@@ -7,14 +7,14 @@ type IInputHandlersOptions = {
   onUpUp: () => void;
 };
 
-export function inputHandlers({
+export function keyboardHandlers({
   onRightDown,
   onLeftDown,
   onUpDown,
   onRightUp,
   onLeftUp,
   onUpUp,
-}: IInputHandlersOptions) {
+}: IKeyboardHandlersOptions) {
   function handleKeyDown(e) {
     if (e.key == "Right" || e.key == "ArrowRight") {
       onRightDown();
