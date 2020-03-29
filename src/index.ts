@@ -17,16 +17,11 @@ canvas.width = CANVAS_WIDTH;
 
 let ctx = canvas.getContext("2d");
 
-// General game state
+// General state
 type IScreen = "mainMenu" | "game" | "editor";
 let screen: IScreen = "mainMenu";
 let time = Date.now();
 
-// Game playing state
-let level = 1;
-let currentLevel = levels[level];
-let { geometry, enemies, player } = currentLevel;
-let shapes = [];
 let clickables: IClickable[] = [];
 
 // Input state
@@ -123,6 +118,14 @@ function checkMouseOverClickables() {
 export function init() {
   ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
+  checkMouseOverClickables();
+
+  if (mouseOverClickableKey) {
+    canvas.style.cursor = "pointer";
+  } else {
+    canvas.style.cursor = "default";
+  }
+
   let frame;
 
   if (screen === "mainMenu") {
@@ -139,15 +142,40 @@ export function init() {
 
   frame();
 
-  checkMouseOverClickables();
-
-  if (mouseOverClickableKey) {
-    canvas.style.cursor = "pointer";
-  } else {
-    canvas.style.cursor = "default";
-  }
-
   requestAnimationFrame(init);
+}
+
+function drawClickable({
+  key,
+  x,
+  y,
+  textSize = 16,
+  textColor = THEME.colors.white,
+  buttonColor = THEME.colors.primary,
+  buttonColorActive = THEME.colors.primaryLight,
+  text,
+  centeredX = false,
+  onClick,
+}) {
+  let bounds = drawButton(ctx, {
+    y,
+    x,
+    textSize,
+    textColor,
+    buttonColor:
+      mouseOverClickableKey === key ? buttonColorActive : buttonColor,
+    text,
+    centeredX,
+  });
+
+  addOrUpdateClickable({
+    key,
+    x: bounds.x,
+    y: bounds.y,
+    width: bounds.width,
+    height: bounds.height,
+    onClick,
+  });
 }
 
 function mainMenuFrame() {
@@ -168,103 +196,174 @@ function mainMenuFrame() {
     centeredX: true,
   });
 
-  let startGameBtnKey = "startGameBtn";
-
-  let startButtonBounds = drawButton(ctx, {
+  drawClickable({
+    key: "startGameBtn",
     y: 144,
     x: 0,
-    textSize: 16,
-    textColor: THEME.colors.white,
-    buttonColor:
-      mouseOverClickableKey === startGameBtnKey
-        ? THEME.colors.primaryLight
-        : THEME.colors.primary,
     text: "play",
     centeredX: true,
-  });
-
-  addOrUpdateClickable({
-    key: startGameBtnKey,
-    x: startButtonBounds.x,
-    y: startButtonBounds.y,
-    width: startButtonBounds.width,
-    height: startButtonBounds.height,
     onClick: () => {
       changeScreen("game");
     },
   });
-
-  let editorBtnKey = "editorBtn";
-
-  let editorButtonBounds = drawButton(ctx, {
+  drawClickable({
+    key: "editorBtn",
     y: 180,
     x: 0,
-    textSize: 16,
-    textColor: THEME.colors.white,
-    buttonColor:
-      mouseOverClickableKey === editorBtnKey
-        ? THEME.colors.primaryLight
-        : THEME.colors.primary,
     text: "level editor",
     centeredX: true,
-  });
-
-  addOrUpdateClickable({
-    key: editorBtnKey,
-    x: editorButtonBounds.x,
-    y: editorButtonBounds.y,
-    width: editorButtonBounds.width,
-    height: editorButtonBounds.height,
     onClick: () => {
       changeScreen("editor");
     },
   });
 }
 
+let editorGeometry = [];
+let dragging = false;
+let newGeo = {
+  color: THEME.colors.primary,
+};
+let editorPlayer = {
+  width: 12,
+  height: 18,
+  x: 326,
+  y: 18 + 12,
+  dx: 0,
+  dy: 0,
+  color: "#8eff81",
+  isJumping: false,
+
+  hitTop: false,
+  hitBottom: false,
+  hitLeft: false,
+  hitRight: false,
+
+  player: true,
+};
+
+let clonedEditorPlayer = { ...editorPlayer };
+
+let editorPlaying = false;
+
 function editorFrame() {
-  drawText(ctx, {
-    y: 48,
-    x: 48,
-    size: 24,
-    color: THEME.colors.primary,
-    text: "this isn't done :/",
-  });
+  if (mouseDown) {
+    dragging = true;
+  }
 
-  let mainMenuBtnKey = "mainMenuBtn";
+  let x = mouseCoords.xStart;
+  let y = mouseCoords.yStart;
+  let xEnd = mouseCoords.xEnd;
+  let yEnd = mouseCoords.yEnd;
 
-  let mainMenuButtonBounds = drawButton(ctx, {
-    y: 144,
-    x: 48,
-    textSize: 16,
-    textColor: THEME.colors.white,
-    buttonColor:
-      mouseOverClickableKey === mainMenuBtnKey
-        ? THEME.colors.primaryLight
-        : THEME.colors.primary,
-    text: "take me back pls",
-  });
+  if (dragging) {
+    xEnd = mouseCoords.xCurrent;
+    yEnd = mouseCoords.yCurrent;
+  }
 
-  addOrUpdateClickable({
-    key: mainMenuBtnKey,
-    x: mainMenuButtonBounds.x,
-    y: mainMenuButtonBounds.y,
-    width: mainMenuButtonBounds.width,
-    height: mainMenuButtonBounds.height,
+  let tempX;
+  let tempY;
+
+  if (x > xEnd) {
+    tempX = x;
+    x = xEnd;
+    xEnd = tempX;
+  }
+
+  if (y > yEnd) {
+    tempY = y;
+    y = yEnd;
+    yEnd = tempY;
+  }
+
+  x = xEnd > x ? x : xEnd;
+  y = yEnd > y ? y : yEnd;
+
+  x = x - (x % 12);
+  y = y - (y % 12);
+
+  let width = Math.round(Math.abs(xEnd - x) / 12) * 12;
+  let height = Math.round(Math.abs(yEnd - y) / 12) * 12;
+
+  newGeo.x = x;
+  newGeo.y = y;
+  newGeo.width = width;
+  newGeo.height = height;
+
+  if (!mouseDown && dragging) {
+    dragging = false;
+
+    editorGeometry.push(newGeo);
+    newGeo = {
+      color: THEME.colors.primary,
+    };
+  }
+
+  for (const geo of editorGeometry) {
+    drawRect(ctx, geo);
+  }
+
+  if (newGeo.x || newGeo.y || newGeo.height || newGeo.width) {
+    drawRect(ctx, newGeo);
+  }
+
+  if (editorPlaying) {
+    drawRect(ctx, clonedEditorPlayer);
+    handleDecelerationAndGravity(clonedEditorPlayer, { friction: true });
+    handleVelocity(clonedEditorPlayer, {
+      rightPressed,
+      leftPressed,
+      upPressed,
+    });
+    handleMovementAndCollisions(clonedEditorPlayer, editorGeometry);
+  }
+
+  /////////////
+  /////////////
+  /////////////
+  drawClickable({
+    key: "mainMenuBtn",
+    y: 12,
+    x: 12,
+    textSize: 12,
+    text: "x",
     onClick: () => {
       changeScreen("mainMenu");
     },
   });
+  drawClickable({
+    key: "clearEditor",
+    y: 12,
+    x: 42,
+    textSize: 12,
+    text: "clear",
+    onClick: () => {
+      editorGeometry = [];
+      newGeo = {};
+    },
+  });
+  drawClickable({
+    key: "spawnPlayer",
+    y: 12,
+    x: 96,
+    textSize: 12,
+    text: "spawn blockie",
+    onClick: () => {
+      editorPlaying = true;
+      clonedEditorPlayer = { ...editorPlayer };
+    },
+  });
 }
+
+// Game playing state
+let level = 1;
+let currentLevel = levels[level];
+let { geometry, enemies, player } = currentLevel;
 
 function gameFrame() {
   // random mob spawner for lols
   if (enemies.length < 6 && Date.now() - time >= 3000) {
     time = Date.now();
     enemies.push({ ...enemies[0], x: 320 });
-  }
-
-  for (const shape of shapes) {
-    drawRect(ctx, shape);
   }
 
   // for (const shape of tempShapes) {
@@ -291,7 +390,6 @@ function gameFrame() {
     handleMovementAndCollisions(enemy, [
       ...geometry,
       ...enemies.filter(e => e !== enemy),
-      ...shapes,
       player,
     ]);
     handleDirectionChange(enemy);
@@ -303,6 +401,21 @@ function gameFrame() {
     leftPressed,
     upPressed,
   });
-  handleMovementAndCollisions(player, [...geometry, ...enemies, ...shapes]);
+  handleMovementAndCollisions(player, [...geometry, ...enemies]);
   // }
+
+  /////////////
+  /////////////
+  /////////////
+
+  drawClickable({
+    key: "mainMenuBtn",
+    y: 12,
+    x: 12,
+    textSize: 12,
+    text: "x",
+    onClick: () => {
+      changeScreen("mainMenu");
+    },
+  });
 }

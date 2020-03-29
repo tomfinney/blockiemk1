@@ -95,11 +95,18 @@ export function drawButton(
       padding,
     y:
       textBounds.y -
-      (Math.round(textBounds.metrics.actualBoundingBoxAscent) +
-        Math.round(textBounds.metrics.actualBoundingBoxDescent)) -
+      Math.round(
+        textBounds.metrics.actualBoundingBoxAscent +
+          textBounds.metrics.actualBoundingBoxDescent
+      ) -
       padding,
     width: textBounds.metrics.width + padding * 2,
-    height: textSize + padding * 2,
+    height:
+      Math.round(
+        textBounds.metrics.actualBoundingBoxAscent +
+          textBounds.metrics.actualBoundingBoxDescent
+      ) +
+      padding * 2,
     color: buttonColor,
   });
 
