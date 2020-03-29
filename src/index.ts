@@ -26,6 +26,7 @@ let level = 1;
 let currentLevel = levels[level];
 let { geometry, enemies, player } = currentLevel;
 let shapes = [];
+let clickables: IClickable[] = [];
 
 // Input state
 let rightPressed = false;
@@ -41,9 +42,7 @@ let mouseCoords = {
   xEnd: 0,
   yEnd: 0,
 };
-
-// Temp state because lazy
-let mouseIsOverButton = false;
+let mouseOverClickableKey = "";
 
 keyboardHandlers({
   onRightDown: () => (rightPressed = true),
@@ -70,15 +69,54 @@ mouseHandlers(canvas, {
     mouseCoords.yCurrent = e.offsetY;
   },
   onMouseClick: e => {
-    if (mouseIsOverButton) {
-      screen = "game";
+    if (mouseOverClickableKey) {
+      let clickable = clickables.find(c => c.key === mouseOverClickableKey);
+      clickable.onClick();
     }
   },
 });
 
+type IClickable = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  key: string;
+  onClick: () => void;
+};
+
+function addOrUpdateClickable(clickable: IClickable) {
+  let clickableIndex = clickables.findIndex(c => c.key === clickable.key);
+
+  if (clickableIndex < 0) {
+    clickables.push(clickable);
+  } else {
+    clickables[clickableIndex] = clickable;
+  }
+}
+
+function checkMouseOverClickables() {
+  let newMouseOverClickableKey = "";
+  for (let clickable of clickables) {
+    let cursorIsInX =
+      mouseCoords.xCurrent >= clickable.x &&
+      clickable.x + clickable.width >= mouseCoords.xCurrent;
+    let cursorIsInY =
+      mouseCoords.yCurrent >= clickable.y &&
+      clickable.y + clickable.height >= mouseCoords.yCurrent;
+
+    if (cursorIsInX && cursorIsInY) {
+      newMouseOverClickableKey = clickable.key;
+    }
+  }
+  mouseOverClickableKey = newMouseOverClickableKey;
+}
+
 export function init() {
   ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
   let frame;
+  clickables = [];
 
   if (screen === "menu") {
     frame = menuFrame;
@@ -89,6 +127,14 @@ export function init() {
   }
 
   frame();
+
+  checkMouseOverClickables();
+
+  if (mouseOverClickableKey) {
+    canvas.style.cursor = "pointer";
+  } else {
+    canvas.style.cursor = "default";
+  }
 
   requestAnimationFrame(init);
 }
@@ -110,33 +156,32 @@ function menuFrame() {
     text: "the game",
     centeredX: true,
   });
+
+  let startGameBtnKey = "startGameBtn";
+
   let buttonBounds = drawButton(ctx, {
     y: 144,
     x: 0,
     textSize: 16,
     textColor: THEME.colors.white,
-    buttonColor: mouseIsOverButton
-      ? THEME.colors.primaryLight
-      : THEME.colors.primary,
+    buttonColor:
+      mouseOverClickableKey === startGameBtnKey
+        ? THEME.colors.primaryLight
+        : THEME.colors.primary,
     text: "play",
     centeredX: true,
   });
 
-  let cursorIsInX =
-    mouseCoords.xCurrent >= buttonBounds.x &&
-    buttonBounds.x + buttonBounds.width >= mouseCoords.xCurrent;
-
-  let cursorIsInY =
-    mouseCoords.yCurrent >= buttonBounds.y &&
-    buttonBounds.y + buttonBounds.height >= mouseCoords.yCurrent;
-
-  mouseIsOverButton = cursorIsInX && cursorIsInY;
-
-  if (mouseIsOverButton) {
-    canvas.style.cursor = "pointer";
-  } else {
-    canvas.style.cursor = "default";
-  }
+  addOrUpdateClickable({
+    key: "startGameBtn",
+    x: buttonBounds.x,
+    y: buttonBounds.y,
+    width: buttonBounds.width,
+    height: buttonBounds.height,
+    onClick: () => {
+      screen = "game";
+    },
+  });
 }
 
 function gameFrame() {
