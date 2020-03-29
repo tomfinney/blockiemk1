@@ -2,3 +2,4 @@ real.js
 node_modules/
 .cache/
 dist/
+.now
