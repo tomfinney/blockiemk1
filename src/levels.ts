@@ -88,9 +88,9 @@ function level1() {
 
     player: {
       width: 12,
-      height: 18,
+      height: 12,
       x: 12,
-      y: CANVAS_HEIGHT - 18 - 12,
+      y: CANVAS_HEIGHT - 12 - 12,
       dx: 0,
       dy: 0,
       color: "#8eff81",
@@ -111,9 +111,9 @@ function level1() {
     enemies: [
       {
         width: 12,
-        height: 18,
+        height: 12,
         x: 320,
-        y: CANVAS_HEIGHT - 18 - 12,
+        y: CANVAS_HEIGHT - 12 - 12,
         dx: 1,
         dy: 0,
         color: "#dd4900",

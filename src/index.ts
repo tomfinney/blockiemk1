@@ -252,7 +252,7 @@ function mainMenuFrame() {
 
 let dragging = false;
 let editorPlaying = false;
-let editorPlacing: "player" | "block" | "lava" | "win" | null = null;
+let editorPlacing: "player" | "block" | "lava" | "win" | "enemy" | null = null;
 let editorPlayerPlaced = false;
 
 let editorGeometry = [];
@@ -261,28 +261,41 @@ let newGeo = {
   color: THEME.colors.primary,
 };
 
-let editorPlayer = {
+let baseEditorCharacter = {
   width: 12,
   height: 12,
   x: 326,
   y: 18 + 12,
   dx: 0,
   dy: 0,
-  color: "#8eff81",
-  isJumping: false,
 
   hitTop: false,
   hitBottom: false,
   hitLeft: false,
   hitRight: false,
+};
 
+let editorPlayer = {
+  ...baseEditorCharacter,
+  color: THEME.colors.good,
+  isJumping: false,
   player: true,
 };
 
 let clonedEditorPlayer = { ...editorPlayer };
 
-function setEditorClone() {
+let editorEnemies = [];
+let clonedEditorEnemies = [];
+
+let editorEnemy = {
+  ...baseEditorCharacter,
+  color: THEME.colors.bad,
+  dx: 1,
+};
+
+function setEditorClones() {
   clonedEditorPlayer = { ...editorPlayer };
+  clonedEditorEnemies = editorEnemies.map(enemy => ({ ...enemy }));
 }
 
 function editorFrame() {
@@ -358,14 +371,6 @@ function editorFrame() {
     }
   }
 
-  if (newGeo.x || newGeo.y || newGeo.height || newGeo.width) {
-    drawRect(ctx, newGeo);
-  }
-
-  for (const geo of editorGeometry) {
-    drawRect(ctx, geo);
-  }
-
   /////////////
   /////////////
 
@@ -385,17 +390,76 @@ function editorFrame() {
     });
   }
 
+  if (editorPlacing === "player") {
+    editorPlayer.x = mouseCoords.xCurrent - (mouseCoords.xCurrent % 12);
+    editorPlayer.y = mouseCoords.yCurrent - (mouseCoords.yCurrent % 12);
+
+    drawRect(ctx, editorPlayer);
+
+    addOrUpdateArbitraryClickEvent({
+      key: "setEditorPlayerCoords",
+      onClick: () => {
+        removeArbitraryClickEvent("setEditorPlayerCoords");
+        editorPlayerPlaced = true;
+        editorPlacing = null;
+        setEditorClones();
+      },
+    });
+  }
+
+  if (editorPlacing === "enemy") {
+    editorEnemy.x = mouseCoords.xCurrent - (mouseCoords.xCurrent % 12);
+    editorEnemy.y = mouseCoords.yCurrent - (mouseCoords.yCurrent % 12);
+
+    drawRect(ctx, editorEnemy);
+
+    addOrUpdateArbitraryClickEvent({
+      key: "setEditorEnemyCoords",
+      onClick: () => {
+        removeArbitraryClickEvent("setEditorEnemyCoords");
+        editorPlacing = null;
+        editorEnemies.push({ ...editorEnemy });
+        setEditorClones();
+      },
+    });
+  }
+
   /////////////
   /////////////
 
-  if (!editorPlaying && editorPlayerPlaced) {
-    drawRect(ctx, editorPlayer);
+  if (newGeo.x || newGeo.y || newGeo.height || newGeo.width) {
+    drawRect(ctx, newGeo);
+  }
+
+  for (const geo of editorGeometry) {
+    drawRect(ctx, geo);
+  }
+
+  if (!editorPlaying) {
+    for (const enemy of editorEnemies) {
+      drawRect(ctx, enemy);
+    }
+
+    if (editorPlayerPlaced) {
+      drawRect(ctx, editorPlayer);
+    }
   }
 
   /////////////
   /////////////
 
   if (editorPlaying) {
+    for (const enemy of clonedEditorEnemies) {
+      drawRect(ctx, enemy);
+      handleDecelerationAndGravity(enemy, { friction: false });
+      handleMovementAndCollisions(enemy, [
+        ...editorGeometry,
+        ...clonedEditorEnemies.filter(e => e !== enemy),
+        clonedEditorPlayer,
+      ]);
+      handleDirectionChange(enemy);
+    }
+
     drawRect(ctx, clonedEditorPlayer);
     handleDecelerationAndGravity(clonedEditorPlayer, { friction: true });
     handleVelocity(clonedEditorPlayer, {
@@ -403,7 +467,10 @@ function editorFrame() {
       leftPressed,
       upPressed,
     });
-    handleMovementAndCollisions(clonedEditorPlayer, editorGeometry);
+    handleMovementAndCollisions(clonedEditorPlayer, [
+      ...editorGeometry,
+      ...clonedEditorEnemies,
+    ]);
   }
 
   /////////////
@@ -428,7 +495,10 @@ function editorFrame() {
     onClick: () => {
       editorGeometry = [];
       newGeo = {};
+      editorEnemies = [];
       editorPlaying = false;
+
+      setEditorClones();
     },
   });
   drawClickable({
@@ -439,7 +509,7 @@ function editorFrame() {
     text: "play level",
     buttonColor: editorPlaying ? THEME.colors.primaryDark : undefined,
     onClick: () => {
-      setEditorClone();
+      setEditorClones();
       editorPlaying = !editorPlaying;
     },
   });
@@ -467,6 +537,7 @@ function editorFrame() {
       editorPlacing === "block" ? THEME.colors.primaryDark : undefined,
     onClick: () => {
       editorPlacing = "block";
+      editorPlaying = false;
     },
   });
   drawClickable({
@@ -490,6 +561,18 @@ function editorFrame() {
     buttonColor: editorPlacing === "win" ? THEME.colors.primaryDark : undefined,
     onClick: () => {
       editorPlacing = "win";
+    },
+  });
+  drawClickable({
+    key: "editorPlaceEnemy",
+    y: 39,
+    x: 282,
+    textSize: 12,
+    text: "place enemy",
+    buttonColor:
+      editorPlacing === "enemy" ? THEME.colors.primaryDark : undefined,
+    onClick: () => {
+      editorPlacing = "enemy";
     },
   });
 }
