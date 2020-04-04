@@ -252,7 +252,7 @@ function mainMenuFrame() {
 
 let dragging = false;
 let editorPlaying = false;
-let editorPlacing: "player" | "block" | null = null;
+let editorPlacing: "player" | "block" | "lava" | "win" | null = null;
 let editorPlayerPlaced = false;
 
 let editorGeometry = [];
@@ -263,7 +263,7 @@ let newGeo = {
 
 let editorPlayer = {
   width: 12,
-  height: 18,
+  height: 12,
   x: 326,
   y: 18 + 12,
   dx: 0,
@@ -321,7 +321,11 @@ function editorFrame() {
   x = x - (x % 12);
   y = y - (y % 12);
 
-  if (editorPlacing === "block") {
+  if (
+    editorPlacing === "block" ||
+    editorPlacing === "lava" ||
+    editorPlacing === "win"
+  ) {
     let width = Math.round(Math.abs(xEnd - x) / 12) * 12;
     let height = Math.round(Math.abs(yEnd - y) / 12) * 12;
 
@@ -329,6 +333,20 @@ function editorFrame() {
     newGeo.y = y;
     newGeo.width = width;
     newGeo.height = height;
+
+    if (editorPlacing === "lava") {
+      newGeo.color = THEME.colors.bad;
+      newGeo.kill = true;
+      newGeo.win = false;
+    } else if (editorPlacing === "win") {
+      newGeo.color = THEME.colors.gold;
+      newGeo.win = true;
+      newGeo.kill = false;
+    } else {
+      newGeo.color = THEME.colors.primary;
+      newGeo.win = false;
+      newGeo.kill = false;
+    }
 
     if (!mouseDown && dragging) {
       dragging = false;
@@ -442,13 +460,36 @@ function editorFrame() {
   drawClickable({
     key: "editorPlaceBlock",
     y: 12,
-    x: 288,
+    x: 282,
     textSize: 12,
     text: "place block",
     buttonColor:
       editorPlacing === "block" ? THEME.colors.primaryDark : undefined,
     onClick: () => {
       editorPlacing = "block";
+    },
+  });
+  drawClickable({
+    key: "editorPlaceLava",
+    y: 12,
+    x: 384,
+    textSize: 12,
+    text: "place lava",
+    buttonColor:
+      editorPlacing === "lava" ? THEME.colors.primaryDark : undefined,
+    onClick: () => {
+      editorPlacing = "lava";
+    },
+  });
+  drawClickable({
+    key: "editorPlaceWin",
+    y: 12,
+    x: 480,
+    textSize: 12,
+    text: "place win",
+    buttonColor: editorPlacing === "win" ? THEME.colors.primaryDark : undefined,
+    onClick: () => {
+      editorPlacing = "win";
     },
   });
 }
