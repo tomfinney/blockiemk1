@@ -23,8 +23,9 @@ let screen: IScreen = "mainMenu";
 let time = Date.now();
 
 let clickables: IClickable[] = [];
+let arbitraryClickEvents: IArbitraryClickEvent[] = [];
 
-// Input state
+// Input states
 let rightPressed = false;
 let leftPressed = false;
 let upPressed = false;
@@ -69,6 +70,9 @@ mouseHandlers(canvas, {
       let clickable = clickables.find(c => c.key === mouseOverClickableKey);
       clickable.onClick();
     }
+    for (const clickEvent of arbitraryClickEvents) {
+      clickEvent.onClick();
+    }
   },
 });
 
@@ -76,6 +80,7 @@ function changeScreen(newScreen: IScreen) {
   screen = newScreen;
 
   clickables = [];
+  arbitraryClickEvents = [];
   mouseOverClickableKey = "";
 }
 
@@ -88,13 +93,36 @@ type IClickable = {
   onClick: () => void;
 };
 
-function addOrUpdateClickable(clickable: IClickable) {
-  let clickableIndex = clickables.findIndex(c => c.key === clickable.key);
+type IArbitraryClickEvent = {
+  key: string;
+  onClick: () => void;
+};
 
-  if (clickableIndex < 0) {
+function addOrUpdateClickable(clickable: IClickable) {
+  let index = clickables.findIndex(c => c.key === clickable.key);
+
+  if (index < 0) {
     clickables.push(clickable);
   } else {
-    clickables[clickableIndex] = clickable;
+    clickables[index] = clickable;
+  }
+}
+
+function addOrUpdateArbitraryClickEvent(clickEvent: IArbitraryClickEvent) {
+  let index = arbitraryClickEvents.findIndex(c => c.key === clickEvent.key);
+
+  if (index < 0) {
+    arbitraryClickEvents.push(clickEvent);
+  } else {
+    arbitraryClickEvents[index] = clickEvent;
+  }
+}
+
+function removeArbitraryClickEvent(key: string) {
+  let index = arbitraryClickEvents.findIndex(c => c.key === key);
+
+  if (index > -1) {
+    arbitraryClickEvents.splice(index, 1);
   }
 }
 
@@ -218,11 +246,21 @@ function mainMenuFrame() {
   });
 }
 
-let editorGeometry = [];
+//////////////
+//////////////
+//////////////
+
 let dragging = false;
+let editorPlaying = false;
+let editorPlacing: "player" | "block" | null = null;
+let editorPlayerPlaced = false;
+
+let editorGeometry = [];
+
 let newGeo = {
   color: THEME.colors.primary,
 };
+
 let editorPlayer = {
   width: 12,
   height: 18,
@@ -243,7 +281,9 @@ let editorPlayer = {
 
 let clonedEditorPlayer = { ...editorPlayer };
 
-let editorPlaying = false;
+function setEditorClone() {
+  clonedEditorPlayer = { ...editorPlayer };
+}
 
 function editorFrame() {
   if (mouseDown) {
@@ -281,30 +321,61 @@ function editorFrame() {
   x = x - (x % 12);
   y = y - (y % 12);
 
-  let width = Math.round(Math.abs(xEnd - x) / 12) * 12;
-  let height = Math.round(Math.abs(yEnd - y) / 12) * 12;
+  if (editorPlacing === "block") {
+    let width = Math.round(Math.abs(xEnd - x) / 12) * 12;
+    let height = Math.round(Math.abs(yEnd - y) / 12) * 12;
 
-  newGeo.x = x;
-  newGeo.y = y;
-  newGeo.width = width;
-  newGeo.height = height;
+    newGeo.x = x;
+    newGeo.y = y;
+    newGeo.width = width;
+    newGeo.height = height;
 
-  if (!mouseDown && dragging) {
-    dragging = false;
+    if (!mouseDown && dragging) {
+      dragging = false;
 
-    editorGeometry.push(newGeo);
-    newGeo = {
-      color: THEME.colors.primary,
-    };
+      editorGeometry.push(newGeo);
+      newGeo = {
+        color: THEME.colors.primary,
+      };
+    }
+  }
+
+  if (newGeo.x || newGeo.y || newGeo.height || newGeo.width) {
+    drawRect(ctx, newGeo);
   }
 
   for (const geo of editorGeometry) {
     drawRect(ctx, geo);
   }
 
-  if (newGeo.x || newGeo.y || newGeo.height || newGeo.width) {
-    drawRect(ctx, newGeo);
+  /////////////
+  /////////////
+
+  if (editorPlacing === "player") {
+    editorPlayer.x = mouseCoords.xCurrent - (mouseCoords.xCurrent % 12);
+    editorPlayer.y = mouseCoords.yCurrent - (mouseCoords.yCurrent % 12);
+
+    drawRect(ctx, editorPlayer);
+
+    addOrUpdateArbitraryClickEvent({
+      key: "setEditorPlayerCoords",
+      onClick: () => {
+        removeArbitraryClickEvent("setEditorPlayerCoords");
+        editorPlayerPlaced = true;
+        editorPlacing = null;
+      },
+    });
   }
+
+  /////////////
+  /////////////
+
+  if (!editorPlaying && editorPlayerPlaced) {
+    drawRect(ctx, editorPlayer);
+  }
+
+  /////////////
+  /////////////
 
   if (editorPlaying) {
     drawRect(ctx, clonedEditorPlayer);
@@ -319,9 +390,9 @@ function editorFrame() {
 
   /////////////
   /////////////
-  /////////////
+
   drawClickable({
-    key: "mainMenuBtn",
+    key: "mainMenu",
     y: 12,
     x: 12,
     textSize: 12,
@@ -339,20 +410,52 @@ function editorFrame() {
     onClick: () => {
       editorGeometry = [];
       newGeo = {};
+      editorPlaying = false;
     },
   });
   drawClickable({
-    key: "spawnPlayer",
+    key: "editorPlay",
     y: 12,
     x: 96,
     textSize: 12,
-    text: "spawn blockie",
+    text: "play level",
+    buttonColor: editorPlaying ? THEME.colors.primaryDark : undefined,
     onClick: () => {
-      editorPlaying = true;
-      clonedEditorPlayer = { ...editorPlayer };
+      setEditorClone();
+      editorPlaying = !editorPlaying;
+    },
+  });
+  drawClickable({
+    key: "editorPlacePlayer",
+    y: 12,
+    x: 192,
+    textSize: 12,
+    text: "set player",
+    buttonColor:
+      editorPlacing === "player" ? THEME.colors.primaryDark : undefined,
+    onClick: () => {
+      editorPlacing = "player";
+      editorPlaying = false;
+      editorPlayerPlaced = false;
+    },
+  });
+  drawClickable({
+    key: "editorPlaceBlock",
+    y: 12,
+    x: 288,
+    textSize: 12,
+    text: "place block",
+    buttonColor:
+      editorPlacing === "block" ? THEME.colors.primaryDark : undefined,
+    onClick: () => {
+      editorPlacing = "block";
     },
   });
 }
+
+//////////////
+//////////////
+//////////////
 
 // Game playing state
 let level = 1;
@@ -442,7 +545,7 @@ function gameFrame() {
   /////////////
 
   drawClickable({
-    key: "mainMenuBtn",
+    key: "mainMenu",
     y: 12,
     x: 12,
     textSize: 12,

@@ -4,6 +4,7 @@ export const THEME = {
   colors: {
     primary: "#0095DD",
     primaryLight: "#58c9ff",
+    primaryDark: "#066ea0",
     good: "#8eff81",
     bad: "#dd4900",
     badLight: "#f56f2d",
